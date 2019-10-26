@@ -1,0 +1,4 @@
+name = "Sips"
+uuid = "424db5c2-f80a-11e9-2f67-5fba105f9f62"
+authors = ["anandijain <anandj@uchicago.edu>"]
+version = "0.1.0"
