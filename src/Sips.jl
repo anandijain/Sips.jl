@@ -1,7 +1,6 @@
 module Sips
 
-greet() = print("Hello World!")
-include("parse_bov.jl")
-export sips_req
+include("LoadData.jl")
+export get_data
 
 end # module
