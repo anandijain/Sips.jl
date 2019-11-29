@@ -1,6 +1,6 @@
 module Sips
 
-include("LoadData.jl")
-export get_data
+include("load.jl")
+export get_dfs
 
 end # module

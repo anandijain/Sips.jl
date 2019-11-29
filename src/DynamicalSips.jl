@@ -3,87 +3,101 @@ module DynamicalSips
 using DifferentialEquations
 using Flux, DiffEqFlux
 using Plots
-# using CuArrays
+using BenchmarkTools
+using CuArrays
 
+# ;cd src
 
-include("LoadData.jl")
-include("SipsUtils.jl")
+include("load.jl")
+include("utils.jl")
 using .LoadData
 using .SipsUtils
 
-function get_ode_ts(ts)
-    lo = minimum(ts)
-    hi = maximum(ts)
-    return lo, hi
-end
 
 function main()
-    dfs = LoadData.get_data()
-    # games = [df_to_ts(df) for df in dfs]
+  cols = ["last_mod", "num_markets", "quarter", "secs", "a_pts", "h_pts", "a_ps", "h_ps", "a_ml", "h_ml"]
+  dfs = LoadData.get_data(cols)
 end
 
 games = main()
 
 # first game
 df = rand(games)
-shape = size(df)
+len = size(df)[1]
 
 # add striding
-stride_value = 3
-subset = view(df, 1:stride_value:shape[1], :)
+view_start = div(len, 4)
+view_end = len
+stride_amt = 5
+
+# take subset of data
+subset = view(df, view_start:stride_amt:view_end, :)
+
+# convert moneylines into decimal
+subset[:, end-1:end] = map(SipsUtils.eq , subset[:, end-1:end])
+
 
 # first column
-t = Array(subset[:, 1])
+t = copy(Array(subset[:, 1])) |> gpu
+
+# adjust offset to t0 = 0
+t -= t[0]
+
+# get min max
+tspan = SipsUtils.get_tspan(t)
+
+plot(t)
 
 # other columns
-data = subset[:, 2:end]'
-
-# convert odds data to decimal
-data = map(SipsUtils.eq, data)
-
+data = copy(subset[:, 2:end]') |> gpu
 
 # first row
-u0 = data[:, 1]
+u0 = data[:, 1] |> gpu
 
 # dimension of ode
 dim = length(u0)
 
-# tspan
-tspan = get_ode_ts(t)
-
 # neural net chain
-dudt = Chain(Dense(dim,15,tanh)
-            # ,Dense(10,15)
-            ,Dense(15,dim))
+dudt = Chain(Dense(dim, 15, tanh)
+            ,Dense(15, 40, tanh)
+            ,Dense(40, dim)) |> gpu
 
-
-n_ode(x) = neural_ode(dudt, x, tspan, Tsit5(), saveat=t, reltol=1e-7, abstol=1e-9)
+n_ode(x) = neural_ode(gpu(dudt), gpu(x), tspan, AutoTsit5(Rosenbrock23()), maxiters=1e7, saveat=t, reltol=1e-7, abstol=1e-9)
 
 function predict_n_ode()
   n_ode(u0)
 end
 
-loss_n_ode() = sum(abs2,data[:, 3:end] .- predict_n_ode())
+@time predicted = predict_n_ode()
+
+loss_n_ode() = sum(abs2,data .- predict_n_ode())
+
+example_loss = loss_n_ode()
+
 
 repeated_data = Iterators.repeated((), 1000)
 opt = ADAM(0.1)
 
 cb = function () #callback function to observe training
   display(loss_n_ode())
+  
   # plot current prediction against data
   cur_pred = Flux.data(predict_n_ode())
-  pl = scatter(t[3:end], data[1, 3:end], label="data")
-  # scatter!(pl, t[3:end], data[2, 3:end], label="data")
-  scatter!(pl, t[3:end], cur_pred, label="prediction")
-  # scatter!(pl, t[3:end], cur_pred[2, :], label="prediction")
-  display(plot(pl))
+  display(cur_pred)
+  # display(size(cur_pred))
+
+  pl = scatter(t, data[end-1:end, :]', label="data")
+  scatter!(pl, t, cur_pred[end-1:end, :]', label="prediction")
+  yticks!([-5:1:5;])
+  xticks!(tspan[1]:1:tspan[2])
+  display(plot(pl, fig))
 end
 
 # Display the ODE with the initial parameter values.
 cb()
 
 ps = Flux.params(dudt)
-Flux.train!(loss_n_ode, ps, repeated_data, opt, cb = cb)
+Flux.train!(loss_n_ode, ps, repeated_data, opt, cb = Flux.throttle(cb, 5))
 
 
 end
