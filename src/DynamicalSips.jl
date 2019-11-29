@@ -3,10 +3,13 @@ module DynamicalSips
 using DifferentialEquations
 using Flux, DiffEqFlux
 using Plots
+# using CuArrays
+
 
 include("LoadData.jl")
+include("SipsUtils.jl")
 using .LoadData
-
+using .SipsUtils
 
 function get_ode_ts(ts)
     lo = minimum(ts)
@@ -22,13 +25,22 @@ end
 games = main()
 
 # first game
-df = games[1]
+df = rand(games)
+shape = size(df)
+
+# add striding
+stride_value = 3
+subset = view(df, 1:stride_value:shape[1], :)
 
 # first column
-t = Array(df[:, 1])
+t = Array(subset[:, 1])
 
 # other columns
-data = df[:, 2:end]'
+data = subset[:, 2:end]'
+
+# convert odds data to decimal
+data = map(SipsUtils.eq, data)
+
 
 # first row
 u0 = data[:, 1]
@@ -39,12 +51,13 @@ dim = length(u0)
 # tspan
 tspan = get_ode_ts(t)
 
-dudt = Chain(Dense(dim,10,tanh)
-            ,Dense(10,15)
+# neural net chain
+dudt = Chain(Dense(dim,15,tanh)
+            # ,Dense(10,15)
             ,Dense(15,dim))
 
 
-n_ode(x) = neural_ode(dudt,x,tspan,Tsit5(),saveat=t,reltol=1e-7,abstol=1e-9)
+n_ode(x) = neural_ode(dudt, x, tspan, Tsit5(), saveat=t, reltol=1e-7, abstol=1e-9)
 
 function predict_n_ode()
   n_ode(u0)
@@ -52,15 +65,17 @@ end
 
 loss_n_ode() = sum(abs2,data[:, 3:end] .- predict_n_ode())
 
-
 repeated_data = Iterators.repeated((), 1000)
 opt = ADAM(0.1)
+
 cb = function () #callback function to observe training
   display(loss_n_ode())
   # plot current prediction against data
   cur_pred = Flux.data(predict_n_ode())
-  pl = scatter(t,data[1,:],label="data")
-  scatter!(pl,t,cur_pred[1,:],label="prediction")
+  pl = scatter(t[3:end], data[1, 3:end], label="data")
+  # scatter!(pl, t[3:end], data[2, 3:end], label="data")
+  scatter!(pl, t[3:end], cur_pred, label="prediction")
+  # scatter!(pl, t[3:end], cur_pred[2, :], label="prediction")
   display(plot(pl))
 end
 

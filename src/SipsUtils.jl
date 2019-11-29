@@ -3,6 +3,24 @@ module SipsUtils
 using StatsBase
 
 
+function eq(odd :: Int)::Rational
+	if odd > 100
+   		return odd // 100
+	else
+   		return abs(100 // odd)
+	end
+end
+
+function eq(odd :: Number)::AbstractFloat
+	if odd > 100
+   		return odd / 100
+	else
+   		return abs(100 / odd)
+	end
+end
+
+
+
 function my_standardize(xs)
 	mu = mean(xs)
 	dev = std(xs)

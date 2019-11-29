@@ -16,8 +16,8 @@ end
 
 function serialize_dfs_py(dfs)
 	data = h.apply_min_then_filter(dfs)
-	#  "quarter", "secs", "a_pts", "h_pts",
-	sdfs = s.serialize_dfs(data, in_cols=["last_mod", "a_ml", "h_ml"], dont_hot=true)
+	#  "quarter", "secs", "a_pts", "h_pts", "h_ml"
+	sdfs = s.serialize_dfs(data, in_cols=["last_mod", "a_ml"], dont_hot=true)
 end
 
 
