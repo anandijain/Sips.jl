@@ -45,11 +45,4 @@ function print_shapes(dfs)
 end
 
 
-function get_tspan(ts)
-  lo = minimum(ts)
-  hi = maximum(ts)
-  return lo, hi
-end
-
-
 end

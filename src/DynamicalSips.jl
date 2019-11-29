@@ -44,7 +44,7 @@ t = copy(Array(subset[:, 1])) |> gpu
 t -= t[0]
 
 # get min max
-tspan = SipsUtils.get_tspan(t)
+tspan = t[0], t[end]
 
 plot(t)
 
