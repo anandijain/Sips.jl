@@ -3,6 +3,16 @@ module SipsUtils
 using StatsBase
 
 
+function to_deci(subset)
+    # convert moneylines into decimal
+    mls = subset[:, end-1:end]
+    display(mls)
+    decimals = map(SipsUtils.eq , mls)
+	display(decimals)
+	return decimals
+end
+
+
 function eq(odd :: Int)::Rational
 	if odd == 0
 		return 0 // 1
