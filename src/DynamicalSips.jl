@@ -12,6 +12,7 @@ include("load.jl")
 include("utils.jl")
 using .LoadData
 using .SipsUtils
+pyplot()
 
 
 function main()
@@ -35,9 +36,11 @@ stride_amt = 1
 # take subset of data
 subset = view(df, view_start:stride_amt:view_end, :)
 
-
+mls = subset[:, end-1:end]
+display(mls)
 # convert moneylines into decimal
-decimals = map(SipsUtils.eq , subset[:, end-1:end])
+decimals = map(SipsUtils.eq , mls)
+
 display(decimals)
 subset[:, end-1:end] = decimals
 
@@ -51,12 +54,12 @@ t = (t .- t[1]) ./ 1000
 
 # get min max
 tspan = t[1], t[end]
-plot(t)
+# plot(t)
 
 
 # other columns
 data = copy(subset[:, 2:end]') |> gpu
-
+target_data = data[:, 2:end]
 
 # first row
 u0 = data[:, 1] |> gpu
@@ -71,7 +74,7 @@ dudt = Chain(Dense(dim, 15, tanh)
             ,Dense(15, 40, tanh)
             ,Dense(40, dim)) |> gpu
 
-n_ode(x) = neural_ode(gpu(dudt), gpu(x), tspan, AutoTsit5(Rosenbrock23()), maxiters=1e7, saveat=t, reltol=1e-5, abstol=1e-7)
+n_ode(x) = neural_ode(gpu(dudt), gpu(x), tspan, AutoTsit5(Rosenbrock23()), maxiters=1e7, saveat=t, reltol=1e-4, abstol=1e-5)
 
 
 function predict_n_ode()
@@ -79,24 +82,37 @@ function predict_n_ode()
 end
 
 
-loss_n_ode() = sum(abs2,data .- predict_n_ode())
+loss_n_ode() = sum(abs2, target_data .- predict_n_ode())
 
 
-function loss_given_preds(preds)
-  loss = sum(abs2,data .- preds)
-  return loss
-end
+cur_pred = Flux.data(predict_n_ode())
+
+display(string("target data shape: ", size(target_data)))
+display(string("pred shape: ", size(cur_pred)))
+
+cur_loss = loss_n_ode()
+display(string("loss: ", cur_loss))
+
+# function loss_given_preds(preds)
+#   loss = sum(abs2,data .- preds)
+#   return loss
+# end
 
 
 repeated_data = Iterators.repeated((), 1000)
 opt = ADAM(0.1)
 
-losses = []
+cur_pred = Flux.data(predict_n_ode())
 
+losses = []
 
 cb = function ()
   cur_pred = Flux.data(predict_n_ode())
-  cur_loss = loss_given_preds(cur_pred)
+
+  display(string("data shape: ", size(data)))
+  display(string("pred shape: ", size(cur_pred)))
+
+  cur_loss = loss_n_ode()
   display(string("loss: ", cur_loss))
   append!(losses, cur_loss)
 
@@ -137,6 +153,7 @@ cb()
 ps = Flux.params(dudt)
 Flux.train!(loss_n_ode, ps, repeated_data, opt, cb = Flux.throttle(cb, 5))
 
-display(plot(losses, size=(900, 900)))
+loss_plot = scatter(losses)
+display(plot(loss_plot, size=(900, 900)))
 
 end

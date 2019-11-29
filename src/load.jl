@@ -3,7 +3,7 @@ module LoadData
 using CSV
 using DataFrames
 using PyCall
-using BenchmarkTools
+# using BenchmarkTools
 
 h = pyimport("sips.h.helpers")
 s = pyimport("sips.h.serialize")
@@ -11,9 +11,9 @@ s = pyimport("sips.h.serialize")
 
 function get_data(cols)
 	dir = "/home/sippycups/absa/sips/data/lines/lines/"
-	@time dfs = h.get_dfs(dir)
-	@time data = h.apply_min_then_filter(dfs)
-	@time data = s.serialize_dfs(dfs, in_cols=cols, norm=true, dont_hot=true)
+	dfs = h.get_dfs(dir)
+	data = h.apply_length_bounds(dfs)
+	data = s.serialize_dfs(dfs, in_cols=cols, norm=false, dont_hot=true)
 end
 
 
