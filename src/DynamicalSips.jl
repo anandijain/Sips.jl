@@ -10,10 +10,8 @@ using CuArrays
 
 include("load.jl")
 include("utils.jl")
-include("vis.jl")
 using .LoadData
 using .SipsUtils
-using .SippyVision
 
 
 function main()
@@ -39,8 +37,9 @@ subset = view(df, view_start:stride_amt:view_end, :)
 
 
 # convert moneylines into decimal
-subset[:, end-1:end] = map(SipsUtils.eq , subset[:, end-1:end])
-
+decimals = map(SipsUtils.eq , subset[:, end-1:end])
+display(decimals)
+subset[:, end-1:end] = decimals
 
 # first column
 t = copy(Array(subset[:, 1])) |> gpu
@@ -72,7 +71,7 @@ dudt = Chain(Dense(dim, 15, tanh)
             ,Dense(15, 40, tanh)
             ,Dense(40, dim)) |> gpu
 
-n_ode(x) = neural_ode(gpu(dudt), gpu(x), tspan, AutoTsit5(Rosenbrock23()), maxiters=1e7, saveat=t, reltol=1e-6, abstol=1e-8)
+n_ode(x) = neural_ode(gpu(dudt), gpu(x), tspan, AutoTsit5(Rosenbrock23()), maxiters=1e7, saveat=t, reltol=1e-5, abstol=1e-7)
 
 
 function predict_n_ode()
@@ -82,29 +81,44 @@ end
 
 loss_n_ode() = sum(abs2,data .- predict_n_ode())
 
+
+function loss_given_preds(preds)
+  loss = sum(abs2,data .- preds)
+  return loss
+end
+
+
 repeated_data = Iterators.repeated((), 1000)
 opt = ADAM(0.1)
 
+losses = []
+
+
 cb = function ()
-  display(loss_n_ode())
   cur_pred = Flux.data(predict_n_ode())
-  
+  cur_loss = loss_given_preds(cur_pred)
+  display(string("loss: ", cur_loss))
+  append!(losses, cur_loss)
+
   pred_a_ml = cur_pred[end-1, :]
   pred_h_ml = cur_pred[end, :]
   
   real_a_ml = data[end-1, :]
   real_h_ml = data[end, :]
-
+  
+  println("")
   println("away predictions")
-  display(pred_a_ml[end-20:end]')
+  display(pred_a_ml')
+  println("")
   println("away reals")
-  display(real_a_ml[end-20:end]')
+  display(real_a_ml')
   println("")
 
   println("home predictions")
-  display(pred_h_ml[end-20:end]')
+  display(pred_h_ml')
+  println("")
   println("home real")
-  display(real_a_ml[end-20:end]')
+  display(real_a_ml')
   
   println("")
   println("")
@@ -114,7 +128,6 @@ cb = function ()
   yticks!([-5:5;])
   xticks!(t[1]:t[end])
 
-  pl = SippyVision.make_plot(t, data, cur_pred)
   display(plot(pl, size=(900, 900)))
 end
 
@@ -124,5 +137,6 @@ cb()
 ps = Flux.params(dudt)
 Flux.train!(loss_n_ode, ps, repeated_data, opt, cb = Flux.throttle(cb, 5))
 
+display(plot(losses, size=(900, 900)))
 
 end
