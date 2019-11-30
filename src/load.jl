@@ -4,7 +4,6 @@ using CSV
 using DataFrames
 
 
-
 function get_fns()
     dir = "/home/sippycups/absa/sips/data/lines/lines/"
     fns = readdir(dir)
@@ -18,18 +17,6 @@ function get_data(cols; set_dtype=false, output_dtype=Float64, to_matrices=true)
 end
 
 
-function get_data_2(cols; set_dtype=false, output_dtype=Float64, to_matrices=true)
-    full_fns = get_fns()
-    parsed = map(fn -> get_and_parse_game(fn, cols), full_fns)
-    parsed = map(x -> convert(Matrix{output_dtype}, x), parsed)
-end
-
-function test()
-    cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
-    @time get_data(cols);
-    @time get_data_2(cols);
-end
-
 function get_and_parse_game(fn, cols)
     df = CSV.read(fn)[:, cols]
     for col in cols
@@ -39,7 +26,7 @@ function get_and_parse_game(fn, cols)
     replace!(df.h_ml, "EVEN"=>"100")
     str_col_names = names(df)[eltypes(df) .== String]
     for str_col_name in str_col_names
-        df[:, str_col_name] = tryparse.(Int, df[:, str_col_name])
+        df[!, str_col_name] = tryparse.(Int, df[:, str_col_name])
     end
     # display(df)
     return df

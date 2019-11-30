@@ -6,48 +6,45 @@ using Plots
 using BenchmarkTools
 using CuArrays
 
-
 include("load.jl")
 include("utils.jl")
 using .LoadData
 using .SipsUtils
-# pyplot()
 
-# todo last_mod dt epsilon nudging  
-# cols = ["last_mod", "num_markets", "quarter", "secs", "a_pts", "h_pts", "a_ps", "h_ps", "a_ml", "h_ml"]
-
-cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
+# -- GET AND PREPARE DATA -- #
+cols = [:last_mod, :a_ml, :h_ml, :num_markets, :quarter, :secs, :a_pts, :h_pts]
 games = LoadData.get_data(cols)
-# take a game
-# df = games[27]
 df = rand(games)
+
 len = size(df)[1]
-# add striding
 view_start = div(len, 2)
 view_end = len
 stride_amt = 2
 
 subset = SipsUtils.spec_view(df, view_start, stride_amt, view_end)
 
-# first column
-t = copy(Array(subset[:, 1])) |> gpu
-# t = t[2:end]
+
+# first column is time
 # adjust offset to t0 = 0
+
+t = copy(Array(subset[:, 1])) |> gpu
 t = (t .- t[1]) ./ 1000
-# get min max
 tspan = t[1], t[end]
+
 # kinda interesting
 # plot(t)
-# other columns
-data = copy(subset[:, 2:end]') 
+
+# other columns are ode data
+data = copy(subset[:, 2:end]')  # notice transposition '
 target_data = data |> gpu
-# first row
+
+# first row is initial conditions
 u0 = target_data[:, 1] |> gpu
+
 # dimension of ode
 dim = length(u0)
-# neural net chain
-# ,Dense(20, 20, tanh)
 
+# neural net chain
 dudt = Chain(Dense(dim, 20, tanh)
             ,Dense(20, dim)) |> gpu
 
@@ -80,10 +77,10 @@ cb = function ()
   display(string("loss: ", cur_loss))
   append!(losses, cur_loss)
 
-  pred_a_ml = cur_pred[end-1, :]
-  pred_h_ml = cur_pred[end, :]
+  pred_a_ml = cur_pred[1, :]
+  pred_h_ml = cur_pred[2, :]
   
-  real_a_ml = target_data[end-1, :]
+  real_a_ml = target_data[, :]
   real_h_ml = target_data[end, :]
   
   println("")

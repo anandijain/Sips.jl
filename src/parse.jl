@@ -1,6 +1,4 @@
-# garbage, decided to just use pycall
-# NFL: 900 secs
-# NBA: 720 secs
+
 function parse_df(df)
     idxs = []
     evens = []
