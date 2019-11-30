@@ -3,7 +3,7 @@ module LoadData
 using CSV
 using DataFrames
 using PyCall
-# using BenchmarkTools
+using BenchmarkTools
 
 h = pyimport("sips.h.helpers")
 s = pyimport("sips.h.serialize")
@@ -43,7 +43,7 @@ function get_and_parse_game(fn, cols)
     for str_col_name in str_col_names
         df[:, str_col_name] = tryparse.(Int, df[:, str_col_name])
     end
-    display(df)
+    # display(df)
     return df
 end
 
@@ -53,6 +53,16 @@ function df_to_ts(df)
     ts = df[:, 1]
     u = df[:, 2:end]
     return ts, u
+end
+
+function time_data_retrievals()
+    cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
+    py_cols = map(String, cols)
+    println("julia time")
+    @time data = get_data_jl(cols)
+    
+    println("python time")
+    @time py_data = get_data_py(py_cols)
 end
 
 end
