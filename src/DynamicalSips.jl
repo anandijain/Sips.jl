@@ -11,14 +11,16 @@ include("load.jl")
 include("utils.jl")
 using .LoadData
 using .SipsUtils
-pyplot()
+# pyplot()
 
 # todo last_mod dt epsilon nudging  
-cols = ["last_mod", "num_markets", "quarter", "secs", "a_pts", "h_pts", "a_ps", "h_ps", "a_ml", "h_ml"]
-games = LoadData.get_data(cols)
+# cols = ["last_mod", "num_markets", "quarter", "secs", "a_pts", "h_pts", "a_ps", "h_ps", "a_ml", "h_ml"]
+
+cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
+games = LoadData.get_data_jl(cols)
 # take a game
-df = games[27]
-# df = rand(games)
+# df = games[27]
+df = rand(games)
 len = size(df)[1]
 # add striding
 view_start = div(len, 2)
@@ -37,8 +39,8 @@ tspan = t[1], t[end]
 # kinda interesting
 # plot(t)
 # other columns
-data = copy(subset[:, 2:end]') |> gpu
-target_data = data
+data = copy(subset[:, 2:end]') 
+target_data = data |> gpu
 # first row
 u0 = target_data[:, 1] |> gpu
 # dimension of ode
@@ -62,7 +64,7 @@ cur_pred = Flux.data(predict_n_ode())
 display(string("target data shape: ", size(target_data)))
 display(string("pred shape: ", size(cur_pred)))
 
-cur_loss = loss_n_ode()
+cur_loss = Flux.data(loss_n_ode())
 display(string("loss: ", cur_loss))
 losses = []
 

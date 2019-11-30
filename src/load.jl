@@ -9,11 +9,42 @@ h = pyimport("sips.h.helpers")
 s = pyimport("sips.h.serialize")
 
 
-function get_data(cols)
+function get_data_py(cols)
 	dir = "/home/sippycups/absa/sips/data/lines/lines/"
 	dfs = h.get_dfs(dir)
 	data = h.apply_length_bounds(dfs)
 	data = s.serialize_dfs(dfs, in_cols=cols, norm=false, dont_hot=true)
+end
+
+function get_fns()
+    dir = "/home/sippycups/absa/sips/data/lines/lines/"
+    fns = readdir(dir)
+    full_fns = map(x -> string(dir, x), fns)
+end
+
+
+function get_data_jl(cols; to_matrices=true)
+    full_fns = get_fns()
+    parsed = map(fn -> get_and_parse_game(fn, cols), full_fns)
+    if to_matrices
+        parsed = map(x -> convert(Matrix, x), parsed)
+    end
+end
+
+
+function get_and_parse_game(fn, cols)
+    df = CSV.read(fn)[:, cols]
+    for col in cols
+        df = df[(df[:, col] .!= "None"), :]
+    end
+    replace!(df.a_ml, "EVEN"=>"100")
+    replace!(df.h_ml, "EVEN"=>"100")
+    str_col_names = names(df)[eltypes(df) .== String]
+    for str_col_name in str_col_names
+        df[:, str_col_name] = tryparse.(Int, df[:, str_col_name])
+    end
+    display(df)
+    return df
 end
 
 
@@ -23,6 +54,5 @@ function df_to_ts(df)
     u = df[:, 2:end]
     return ts, u
 end
-
 
 end
