@@ -2,19 +2,8 @@ module LoadData
 
 using CSV
 using DataFrames
-using PyCall
-using BenchmarkTools
-
-h = pyimport("sips.h.helpers")
-s = pyimport("sips.h.serialize")
 
 
-function get_data_py(cols)
-	dir = "/home/sippycups/absa/sips/data/lines/lines/"
-	dfs = h.get_dfs(dir)
-	data = h.apply_length_bounds(dfs)
-	data = s.serialize_dfs(dfs, in_cols=cols, norm=false, dont_hot=true)
-end
 
 function get_fns()
     dir = "/home/sippycups/absa/sips/data/lines/lines/"
@@ -23,14 +12,23 @@ function get_fns()
 end
 
 
-function get_data_jl(cols; to_matrices=true)
+function get_data(cols; set_dtype=false, output_dtype=Float64, to_matrices=true)
     full_fns = get_fns()
-    parsed = map(fn -> get_and_parse_game(fn, cols), full_fns)
-    if to_matrices
-        parsed = map(x -> convert(Matrix, x), parsed)
-    end
+    parsed = map(fn -> convert(Matrix{output_dtype}, get_and_parse_game(fn, cols)), full_fns)
 end
 
+
+function get_data_2(cols; set_dtype=false, output_dtype=Float64, to_matrices=true)
+    full_fns = get_fns()
+    parsed = map(fn -> get_and_parse_game(fn, cols), full_fns)
+    parsed = map(x -> convert(Matrix{output_dtype}, x), parsed)
+end
+
+function test()
+    cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
+    @time get_data(cols);
+    @time get_data_2(cols);
+end
 
 function get_and_parse_game(fn, cols)
     df = CSV.read(fn)[:, cols]
@@ -55,14 +53,6 @@ function df_to_ts(df)
     return ts, u
 end
 
-function time_data_retrievals()
-    cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
-    py_cols = map(String, cols)
-    println("julia time")
-    @time data = get_data_jl(cols)
-    
-    println("python time")
-    @time py_data = get_data_py(py_cols)
-end
+
 
 end

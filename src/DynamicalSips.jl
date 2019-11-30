@@ -17,7 +17,7 @@ using .SipsUtils
 # cols = ["last_mod", "num_markets", "quarter", "secs", "a_pts", "h_pts", "a_ps", "h_ps", "a_ml", "h_ml"]
 
 cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
-games = LoadData.get_data_jl(cols)
+games = LoadData.get_data(cols)
 # take a game
 # df = games[27]
 df = rand(games)

@@ -24,4 +24,16 @@ function get_columns_from_dfs(dfs, cols)
         append!(df[:, cols], specific_columns)
     end
     return specific_columns
+
+
+function time_data_retrievals()
+    cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
+    py_cols = map(String, cols)
+    println("julia time")
+    @time data = LoadData.get_data_jl(cols)
+    
+    println("python time")
+    @time py_data = LoadData.get_data_py(py_cols)
+end    
+
 end
