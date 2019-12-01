@@ -12,7 +12,7 @@ using .LoadData
 using .SipsUtils
 
 # -- GET AND PREPARE DATA -- #
-cols = [:last_mod, :a_ml, :h_ml, :num_markets, :quarter, :secs, :a_pts, :h_pts]
+cols = [:last_mod, :quarter, :secs, :a_ml, :h_ml, :num_markets, :a_pts, :h_pts]
 games = LoadData.get_data(cols)
 df = rand(games)
 
@@ -21,7 +21,7 @@ view_start = div(len, 2)
 view_end = len
 stride_amt = 2
 
-subset = SipsUtils.spec_view(df, view_start, stride_amt, view_end)
+subset = view(df, view_start:stride_amt:view_end, :)
 
 
 # first column is time

@@ -3,18 +3,10 @@ module SipsUtils
 using StatsBase
 
 
-function spec_view(df, view_start, stride_amt, view_end)
-	# take subset of data, adjust moneylines to decimal
-	subset = view(df, view_start:stride_amt:view_end, :)
-	decimals = SipsUtils.to_deci(subset)
-	subset[:, end-1] = decimals[:, end-1]
-	subset[:, end] = decimals[:, end]
-	println("subset")
-	display(subset)
-	return subset
+function get_dfs(dir="/home/sippycups/absa/sips/data/lines/lines/")
+    fns = readdir(dir)
+    dfs = map(fn -> CSV.read(string(dir, fn)), fns)
 end
-
-
 
 
 function print_shapes(dfs)

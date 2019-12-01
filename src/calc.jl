@@ -20,9 +20,9 @@ period_lengths = Dict{String, Int}(
     "foot" => 900
 )
 
-function seconds_remaining(sport::String, df::Union{Matrix, DataFrame})::Array{Int}
-    time_remaining_array = secs_left.(sport, df.quarter, df.secs)
-end
+# function seconds_remaining(sport::String, df::DataFrame)::Array{Int}
+#     time_remaining_array = secs_left.(sport, df.quarter, df.secs)
+# end
 
 
 function secs_left(sport::String, q::Int, secs::Int)::Int
@@ -32,14 +32,6 @@ function secs_left(sport::String, q::Int, secs::Int)::Int
         q_time = (period_counts[sport] - q) * period_lengths[sport]  
         remaining = q_time + secs
     end
-end
-
-
-function to_deci(subset)
-    # convert moneylines into decimal
-    mls = subset[:, end-1:end]
-    decimals = map(SipsUtils.eq , mls)
-	return decimals
 end
 
 
