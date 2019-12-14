@@ -12,7 +12,7 @@ using .LoadData
 using .SipsUtils
 
 # -- GET AND PREPARE DATA -- #
-cols = [:last_mod, :quarter, :secs, :a_ml, :h_ml, :num_markets, :a_pts, :h_pts]
+cols = [:last_mod, :a_ml, :h_ml, :quarter, :secs,  :num_markets, :a_pts, :h_pts]
 games = LoadData.get_data(cols)
 df = rand(games)
 
@@ -48,7 +48,7 @@ dim = length(u0)
 dudt = Chain(Dense(dim, 20, tanh)
             ,Dense(20, dim)) |> gpu
 
-n_ode(x) = neural_ode(gpu(dudt), gpu(x), tspan, AutoTsit5(Rosenbrock23()), maxiters=1e7, saveat=t, reltol=1e-5, abstol=1e-7)
+n_ode(x) = neural_ode(gpu(dudt), gpu(x), tspan, Vern9(), maxiters=1e7, saveat=t, reltol=1e-5, abstol=1e-7)
 
 
 function predict_n_ode()
@@ -80,8 +80,8 @@ cb = function ()
   pred_a_ml = cur_pred[1, :]
   pred_h_ml = cur_pred[2, :]
   
-  real_a_ml = target_data[, :]
-  real_h_ml = target_data[end, :]
+  real_a_ml = target_data[1, :]
+  real_h_ml = target_data[2, :]
   
   println("")
   println("away predictions")

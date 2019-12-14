@@ -50,5 +50,4 @@ end
 cols = [:last_mod, :num_markets, :quarter, :secs, :a_pts, :h_pts, :a_ml, :h_ml]
 benchmark_both(cols)
 
-
 end

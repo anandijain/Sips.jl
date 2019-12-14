@@ -4,6 +4,7 @@ using CSV
 using DataFrames
 using BenchmarkTools
 
+
 function get_fns()::Array{String, 1}
     dir = "/home/sippycups/absa/sips/data/lines/lines/"
     fns = readdir(dir)
@@ -22,13 +23,10 @@ function get_and_parse_game(fn::String, cols::Array{Symbol, 1}; verbose=false)::
     for col in cols
         df = df[(df[:, col] .!= "None"), :]
     end
-
     df = parse_ml(df)
-
     if verbose
         display(df)
     end
-
     return df
 end
 
